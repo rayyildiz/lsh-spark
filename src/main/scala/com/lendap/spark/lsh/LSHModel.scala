@@ -1,29 +1,29 @@
 package com.lendap.spark.lsh
 
 /**
- * Created by maytekin on 06.08.2015.
- */
+  * Created by maytekin on 06.08.2015.
+  */
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.SparseVector
+import org.apache.spark.mllib.util.Saveable
 import org.apache.spark.rdd.RDD
-import scala.collection.mutable.ListBuffer
-import org.apache.spark.mllib.util.{Saveable}
-
-import org.json4s._
 import org.json4s.JsonDSL._
+import org.json4s._
 import org.json4s.jackson.JsonMethods._
+
+import scala.collection.mutable.ListBuffer
 
 
 /** Create LSH model for maximum m number of elements in each vector.
   *
-  * @param m max number of possible elements in a vector
-  * @param numHashFunc number of hash functions
+  * @param m             max number of possible elements in a vector
+  * @param numHashFunc   number of hash functions
   * @param numHashTables number of hashTables.
   *
-  * */
-class LSHModel(val m: Int, val numHashFunc : Int, val numHashTables: Int)
+  **/
+class LSHModel(val m: Int, val numHashFunc: Int, val numHashTables: Int)
   extends Serializable with Saveable {
 
   /** generate numHashFunc * numBands randomly generated hash functions and store them in hashFunctions */
@@ -45,34 +45,34 @@ class LSHModel(val m: Int, val numHashFunc : Int, val numHashTables: Int)
     hashTables.filter(x => x._1._2 == hashKey).map(a => a._2)
   }
 
-  /** creates hashValue for each hashTable.*/
+  /** creates hashValue for each hashTable. */
   def hashValue(data: SparseVector): List[(Int, String)] =
     hashFunctions.map(a => (a._2 % numHashTables, a._1.hash(data)))
-    .groupBy(_._1)
-    .map(x => (x._1, x._2.map(_._2).mkString(""))).toList
+      .groupBy(_._1)
+      .map(x => (x._1, x._2.map(_._2).mkString(""))).toList
 
-  /** returns candidate set for given vector id.*/
+  /** returns candidate set for given vector id. */
   def getCandidates(vId: Long): RDD[Long] = {
     val buckets = hashTables.filter(x => x._2 == vId).map(x => x._1).distinct().collect()
     hashTables.filter(x => buckets contains x._1).map(x => x._2).filter(x => x != vId)
   }
 
-  /** returns candidate set for given vector.*/
+  /** returns candidate set for given vector. */
   def getCandidates(v: SparseVector): RDD[Long] = {
     val hashVal = hashValue(v)
     hashTables.filter(x => hashVal contains x._1).map(x => x._2)
   }
 
   /** adds a new sparse vector with vector Id: vId to the model. */
-  def add (vId: Long, v: SparseVector, sc: SparkContext): LSHModel = {
+  def add(vId: Long, v: SparseVector, sc: SparkContext): LSHModel = {
     val newRDD = sc.parallelize(hashValue(v).map(a => (a, vId)))
     hashTables ++ newRDD
     this
   }
 
   /** remove sparse vector with vector Id: vId from the model. */
-  def remove (vId: Long, sc: SparkContext): LSHModel = {
-    hashTables =  hashTables.filter(x => x._2 != vId)
+  def remove(vId: Long, sc: SparkContext): LSHModel = {
+    hashTables = hashTables.filter(x => x._2 != vId)
     this
   }
 
@@ -89,15 +89,14 @@ object LSHModel {
     LSHModel.SaveLoadV0_0_1.load(sc, path)
   }
 
-  private [lsh] object SaveLoadV0_0_1 {
+  private[lsh] object SaveLoadV0_0_1 {
 
     private val thisFormatVersion = "0.0.1"
     private val thisClassName = this.getClass.getName()
 
     def save(sc: SparkContext, model: LSHModel, path: String): Unit = {
 
-      val metadata =
-        compact(render(("class" -> thisClassName) ~ ("version" -> thisFormatVersion)))
+      val metadata = compact(render(("class" -> thisClassName) ~ ("version" -> thisFormatVersion)))
 
       //save metadata info
       sc.parallelize(Seq(metadata), 1).saveAsTextFile(Loader.metadataPath(path))
@@ -108,7 +107,7 @@ object LSHModel {
         .map(_.productIterator.mkString(",")))
         .saveAsTextFile(Loader.hasherPath(path))
 
-     //save data as (hashTableId#, hashValue, vectorId)
+      //save data as (hashTableId#, hashValue, vectorId)
       model.hashTables
         .map(x => (x._1._1, x._1._2, x._2))
         .map(_.productIterator.mkString(","))
@@ -149,6 +148,7 @@ object LSHModel {
       model
     }
   }
+
 }
 
 
@@ -166,9 +166,10 @@ private[lsh] object Loader {
   def hasherPath(path: String): String = new Path(path, "hasher").toUri.toString
 
   /**
-   * Load metadata from the given path.
-   * @return (class name, version, metadata)
-   */
+    * Load metadata from the given path.
+    *
+    * @return (class name, version, metadata)
+    */
   def loadMetadata(sc: SparkContext, path: String): (String, String, JValue) = {
     implicit val formats = DefaultFormats
     val metadata = parse(sc.textFile(metadataPath(path)).first())

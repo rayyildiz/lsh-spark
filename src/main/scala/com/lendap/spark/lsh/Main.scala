@@ -1,18 +1,15 @@
 package com.lendap.spark.lsh
 
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkConf
-
-import org.apache.spark.mllib.linalg.{Vectors, SparseVector}
-import org.apache.spark.rdd.PairRDDFunctions
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.mllib.linalg.{SparseVector, Vectors}
 
 
 /**
- * Created by maytekin on 05.08.2015.
- */
+  * Created by maytekin on 05.08.2015.
+  */
 object Main {
 
-  /** Sample usage of LSH on movie rating data.*/
+  /** Sample usage of LSH on movie rating data. */
   def main(args: Array[String]) {
 
     //init spark context
@@ -40,7 +37,7 @@ object Main {
 
     //convert each user's rating to tuple of (user_id, SparseVector_of_ratings)
     val sparseVectorData = userItemRatings
-      .map(a=>(a._1.toLong, Vectors.sparse(maxIndex, a._2.toSeq).asInstanceOf[SparseVector]))
+      .map(a => (a._1.toLong, Vectors.sparse(maxIndex, a._2.toSeq).asInstanceOf[SparseVector]))
 
     //run locality sensitive hashing model with 6 hashTables and 8 hash functions
     val lsh = new LSH(sparseVectorData, maxIndex, numHashFunc = 8, numHashTables = 6)
@@ -66,8 +63,8 @@ object Main {
     modelLoaded.hashTables.take(15) foreach println
 
     //create a user vector with ratings on movies
-    val movies = List(1,6,17,29,32,36,76,137,154,161,172,173,185,223,232,235,260,272,296,300,314,316,318,327,337,338,348)
-    val ratings = List(5.0,4.0,4.0,5.0,5.0,4.0,5.0,3.0,4.0,4.0,4.0,4.0,4.0,5.0,5.0,4.0,5.0,5.0,4.0,4.0,4.0,5.0,5.0,5.0,4.0,4.0,4.0)
+    val movies = List(1, 6, 17, 29, 32, 36, 76, 137, 154, 161, 172, 173, 185, 223, 232, 235, 260, 272, 296, 300, 314, 316, 318, 327, 337, 338, 348)
+    val ratings = List(5.0, 4.0, 4.0, 5.0, 5.0, 4.0, 5.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 4.0, 5.0, 5.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 4.0, 4.0, 4.0)
     val sampleVector = Vectors.sparse(maxIndex, movies zip ratings).asInstanceOf[SparseVector]
     println(sampleVector)
 
