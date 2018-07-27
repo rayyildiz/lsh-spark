@@ -4,20 +4,20 @@ import org.apache.spark.mllib.linalg.{SparseVector, Vectors}
 import org.scalatest.FunSuite
 
 /**
-*  Created by maruf on 09/08/15.
-*/
+  * Created by maruf on 09/08/15.
+  */
 class LSHTestSuit extends FunSuite with LocalSparkContext {
 
   val simpleDataRDD = List(
-    List(5.0,3.0,4.0,5.0,5.0,1.0,5.0,3.0,4.0,5.0).zipWithIndex.map(a=>a.swap),
-    List(1.0,2.0,1.0,5.0,1.0,5.0,1.0,4.0,1.0,3.0).zipWithIndex.map(a=>a.swap),
-    List(5.0,3.0,4.0,1.0,5.0,4.0,1.0,3.0,4.0,5.0).zipWithIndex.map(a=>a.swap),
-    List(1.0,3.0,4.0,5.0,5.0,1.0,1.0,3.0,4.0,5.0).zipWithIndex.map(a=>a.swap))
+    List(5.0, 3.0, 4.0, 5.0, 5.0, 1.0, 5.0, 3.0, 4.0, 5.0).zipWithIndex.map(a => a.swap),
+    List(1.0, 2.0, 1.0, 5.0, 1.0, 5.0, 1.0, 4.0, 1.0, 3.0).zipWithIndex.map(a => a.swap),
+    List(5.0, 3.0, 4.0, 1.0, 5.0, 4.0, 1.0, 3.0, 4.0, 5.0).zipWithIndex.map(a => a.swap),
+    List(1.0, 3.0, 4.0, 5.0, 5.0, 1.0, 1.0, 3.0, 4.0, 5.0).zipWithIndex.map(a => a.swap))
 
   test("hasher") {
 
     val h = Hasher(10, 12345678)
-    val rdd = sc.parallelize(simpleDataRDD)
+    val rdd = session.sparkContext.parallelize(simpleDataRDD)
 
     //make sure we have 4
     assert(rdd.count() == 4)
@@ -35,7 +35,7 @@ class LSHTestSuit extends FunSuite with LocalSparkContext {
 
   }
 
-  test ("lsh") {
+  test("lsh") {
 
     val numBands = 5
     val numHashFunc = 4
@@ -46,31 +46,31 @@ class LSHTestSuit extends FunSuite with LocalSparkContext {
     //generate n random vectors whose elements range 1-5
     val dataRDD = List.range(1, n)
       .map(a => (a, List.fill(m)(1 + rnd.nextInt(5).toDouble).zipWithIndex.map(x => x.swap)))
-    val vectorsRDD = sc.parallelize(dataRDD).map(a => (a._1.toLong, Vectors.sparse(a._2.size, a._2).asInstanceOf[SparseVector]))
+    val vectorsRDD = session.sparkContext.parallelize(dataRDD).map(a => (a._1.toLong, Vectors.sparse(a._2.size, a._2).asInstanceOf[SparseVector]))
 
-    val lsh = new  LSH(vectorsRDD, m, numHashFunc, numBands)
+    val lsh = new LSH(vectorsRDD, m, numHashFunc, numBands)
     val model = lsh.run()
 
     //make sure numBands hashTables created
-    assert (model.hashTables.map(a => a._1._1).collect().distinct.length == numBands)
+    assert(model.hashTables.map(a => a._1._1).collect().distinct.length == numBands)
 
     //make sure each key size matches with number of hash functions
-    assert (model.hashTables.filter(a => a._1._2.length != numHashFunc).count == 0)
+    assert(model.hashTables.filter(a => a._1._2.length != numHashFunc).count == 0)
 
     //make sure there is no empty bucket
-    assert (model.hashTables
+    assert(model.hashTables
       .map(a => (a._1._2, a._2))
       .groupByKey().filter(x => x._2.isEmpty)
       .count == 0)
 
     //make sure vectors are not clustered in one bucket
-    assert (model.hashTables
+    assert(model.hashTables
       .map(a => (a._1._1, a._1._2))
       .groupByKey().filter(x => x._2.size == n)
       .count == 0)
 
     //make sure number of buckets for each hashTables is in expected range (2 - 2^numHashFunc)
-    assert (model.hashTables
+    assert(model.hashTables
       .map(a => (a._1._1, a._1._2))
       .groupByKey()
       .map(a => (a._1, a._2.toList.distinct))
@@ -79,8 +79,8 @@ class LSHTestSuit extends FunSuite with LocalSparkContext {
 
     //test save/load operations
     val temp = "target/test/" + System.currentTimeMillis().toString
-    model.save(sc, temp)
-    val model2 = LSHModel.load(sc, temp)
+    model.save(session.sparkContext, temp)
+    val model2 = LSHModel.load(session, temp)
 
     //make sure size of saved and loaded models are the same
     assert(model.hashTables.count == model2.hashTables.count)
@@ -91,7 +91,7 @@ class LSHTestSuit extends FunSuite with LocalSparkContext {
     testRDD.foreach(x => assert(model.hashValue(x._2) == model2.hashValue(x._2)))
 
     //test cosine similarity
-    val rdd = sc.parallelize(simpleDataRDD)
+    val rdd = session.sparkContext.parallelize(simpleDataRDD)
 
     //convert data to RDD of SparseVector
     val vectorRDD = rdd.map(a => Vectors.sparse(a.size, a).asInstanceOf[SparseVector])

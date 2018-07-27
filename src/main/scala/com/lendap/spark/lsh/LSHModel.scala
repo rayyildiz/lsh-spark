@@ -8,9 +8,10 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.SparseVector
 import org.apache.spark.rdd.RDD
-import scala.collection.mutable.ListBuffer
-import org.apache.spark.mllib.util.{Saveable}
 
+import scala.collection.mutable.ListBuffer
+import org.apache.spark.mllib.util.Saveable
+import org.apache.spark.sql.SparkSession
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -76,7 +77,7 @@ class LSHModel(val m: Int, val numHashFunc : Int, val numHashTables: Int)
     this
   }
 
-  override def save(sc: SparkContext, path: String): Unit =
+  override def save(sc:SparkContext, path: String): Unit =
     LSHModel.SaveLoadV0_0_1.save(sc, this, path)
 
   override protected def formatVersion: String = "0.0.1"
@@ -85,16 +86,16 @@ class LSHModel(val m: Int, val numHashFunc : Int, val numHashTables: Int)
 
 object LSHModel {
 
-  def load(sc: SparkContext, path: String): LSHModel = {
-    LSHModel.SaveLoadV0_0_1.load(sc, path)
+  def load(session:SparkSession, path: String): LSHModel = {
+    LSHModel.SaveLoadV0_0_1.load(session, path)
   }
 
   private [lsh] object SaveLoadV0_0_1 {
 
-    private val thisFormatVersion = "0.0.1"
+    private val thisFormatVersion = "0.2.0"
     private val thisClassName = this.getClass.getName()
 
-    def save(sc: SparkContext, model: LSHModel, path: String): Unit = {
+    def save(sc:SparkContext, model: LSHModel, path: String): Unit = {
 
       val metadata =
         compact(render(("class" -> thisClassName) ~ ("version" -> thisFormatVersion)))
@@ -116,16 +117,16 @@ object LSHModel {
 
     }
 
-    def load(sc: SparkContext, path: String): LSHModel = {
+    def load(session:SparkSession, path: String): LSHModel = {
 
       implicit val formats = DefaultFormats
-      val (className, formatVersion, metadata) = Loader.loadMetadata(sc, path)
+      val (className, formatVersion, metadata) = Loader.loadMetadata(session, path)
       assert(className == thisClassName)
       assert(formatVersion == thisFormatVersion)
-      val hashTables = sc.textFile(Loader.dataPath(path))
+      val hashTables = session.sparkContext.textFile(Loader.dataPath(path))
         .map(x => x.split(","))
         .map(x => ((x(0).toInt, x(1)), x(2).toLong))
-      val hashers = sc.textFile(Loader.hasherPath(path))
+      val hashers = session.sparkContext.textFile(Loader.hasherPath(path))
         .map(a => a.split(","))
         .map(x => (x.head, x.tail))
         .map(x => (new Hasher(x._2.map(_.toDouble)), x._1.toInt)).collect().toList
@@ -169,9 +170,9 @@ private[lsh] object Loader {
    * Load metadata from the given path.
    * @return (class name, version, metadata)
    */
-  def loadMetadata(sc: SparkContext, path: String): (String, String, JValue) = {
+  def loadMetadata(session:SparkSession, path: String): (String, String, JValue) = {
     implicit val formats = DefaultFormats
-    val metadata = parse(sc.textFile(metadataPath(path)).first())
+    val metadata = parse(session.sparkContext.textFile(metadataPath(path)).first())
     val clazz = (metadata \ "class").extract[String]
     val version = (metadata \ "version").extract[String]
     (clazz, version, metadata)

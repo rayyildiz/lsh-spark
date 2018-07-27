@@ -16,7 +16,7 @@ is based on Charikar's LSH schema for cosine distance described in
 (http://www.cs.princeton.edu/courses/archive/spr04/cos598B/bib/CharikarEstim.pdf) 
 paper. This scheme uses random hyperplane based hash functions for collection of 
 vectors to produce hash values. The model build (preprocessing) and query answering 
-algorithms implemented as described in Figures 1 and 2 of http://www.vldb.org/conf/1999/P49.pdf.
+algorithms implemented as described in Figures 1 and 2 of [http://www.vldb.org/conf/1999/P49.pdf](http://www.vldb.org/conf/1999/P49.pdf). 
 
 The implementation is inspired from spark-hash project on github.
 

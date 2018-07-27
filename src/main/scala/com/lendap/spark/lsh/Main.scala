@@ -1,30 +1,29 @@
 package com.lendap.spark.lsh
 
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkConf
-
-import org.apache.spark.mllib.linalg.{Vectors, SparseVector}
-import org.apache.spark.rdd.PairRDDFunctions
+import org.apache.spark.mllib.linalg.{SparseVector, Vectors}
+import org.apache.spark.sql.SparkSession
 
 
 /**
- * Created by maytekin on 05.08.2015.
- */
+  * Created by maytekin on 05.08.2015.
+  */
 object Main {
 
-  /** Sample usage of LSH on movie rating data.*/
+  /** Sample usage of LSH on movie rating data. */
   def main(args: Array[String]) {
-
+    val hadoopHomeDir = System.getProperty("hadoop.home.dir")
+    if (hadoopHomeDir.isEmpty) {
+      // TODO set hadoop home directory for misssing winutils.exe file.
+      System.setProperty("hadoop.home.dir", "C:\\Apps\\SDK\\Hadoop\\hadoop-2.7.4")
+    }
     //init spark context
     val numPartitions = 8
     val dataFile = "data/ml-1m.data"
-    val conf = new SparkConf()
-      .setAppName("LSH")
-      .setMaster("local[4]")
-    val sc = new SparkContext(conf)
+
+    val session = SparkSession.builder().appName("LSH").master("local[*]").getOrCreate()
 
     //read data file in as a RDD, partition RDD across <partitions> cores
-    val data = sc.textFile(dataFile, numPartitions)
+    val data = session.sparkContext.textFile(dataFile, numPartitions)
 
     //parse data and create (user, item, rating) tuples
     val ratingsRDD = data
@@ -40,7 +39,7 @@ object Main {
 
     //convert each user's rating to tuple of (user_id, SparseVector_of_ratings)
     val sparseVectorData = userItemRatings
-      .map(a=>(a._1.toLong, Vectors.sparse(maxIndex, a._2.toSeq).asInstanceOf[SparseVector]))
+      .map(a => (a._1.toLong, Vectors.sparse(maxIndex, a._2.toSeq).asInstanceOf[SparseVector]))
 
     //run locality sensitive hashing model with 6 hashTables and 8 hash functions
     val lsh = new LSH(sparseVectorData, maxIndex, numHashFunc = 8, numHashTables = 6)
@@ -56,18 +55,18 @@ object Main {
     println("Candidate List: " + candList.collect().toList)
 
     //save model
-    val temp = "target/" + System.currentTimeMillis().toString
-    model.save(sc, temp)
+    val temp = "target/data/" + System.currentTimeMillis().toString
+    model.save(session.sparkContext, temp)
 
     //load model
-    val modelLoaded = LSHModel.load(sc, temp)
+    val modelLoaded = LSHModel.load(session, temp)
 
     //print out 10 entries from loaded model
     modelLoaded.hashTables.take(15) foreach println
 
     //create a user vector with ratings on movies
-    val movies = List(1,6,17,29,32,36,76,137,154,161,172,173,185,223,232,235,260,272,296,300,314,316,318,327,337,338,348)
-    val ratings = List(5.0,4.0,4.0,5.0,5.0,4.0,5.0,3.0,4.0,4.0,4.0,4.0,4.0,5.0,5.0,4.0,5.0,5.0,4.0,4.0,4.0,5.0,5.0,5.0,4.0,4.0,4.0)
+    val movies = List(1, 6, 17, 29, 32, 36, 76, 137, 154, 161, 172, 173, 185, 223, 232, 235, 260, 272, 296, 300, 314, 316, 318, 327, 337, 338, 348)
+    val ratings = List(5.0, 4.0, 4.0, 5.0, 5.0, 4.0, 5.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 4.0, 5.0, 5.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 4.0, 4.0, 4.0)
     val sampleVector = Vectors.sparse(maxIndex, movies zip ratings).asInstanceOf[SparseVector]
     println(sampleVector)
 

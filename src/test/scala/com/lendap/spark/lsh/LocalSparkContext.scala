@@ -1,27 +1,26 @@
 package com.lendap.spark.lsh
 
 /**
- * Created by maruf on 09/08/15.
- */
-import org.scalatest.Suite
-import org.scalatest.BeforeAndAfterAll
+  * Created by maruf on 09/08/15.
+  */
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
-trait LocalSparkContext extends BeforeAndAfterAll { self: Suite =>
-  @transient var sc: SparkContext = _
+trait LocalSparkContext extends BeforeAndAfterAll {
+  self: Suite =>
+  @transient var session: SparkSession = _
 
   override def beforeAll() {
-    val conf = new SparkConf()
-      .setMaster("local")
-      .setAppName("test")
-    sc = new SparkContext(conf)
+    session = SparkSession.builder().appName("test_lsh").master("local").getOrCreate()
+
+
     super.beforeAll()
   }
 
   override def afterAll() {
-    if (sc != null) {
-      sc.stop()
+    if (session != null) {
+      session.stop()
     }
     super.afterAll()
   }

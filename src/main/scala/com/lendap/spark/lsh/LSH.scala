@@ -1,24 +1,25 @@
 package com.lendap.spark.lsh
 
 /**
- * Created by maruf on 09/08/15.
- */
+  * Created by maruf on 09/08/15.
+  */
 
+import org.apache.spark.ml.feature.HashingTF
 import org.apache.spark.mllib.linalg.SparseVector
 import org.apache.spark.rdd.RDD
 
 /** Build LSH model with data RDD. Hash each vector number of hashTable times and stores in a bucket.
   *
-  *
-  * @param data RDD of sparse vectors with vector Ids. RDD(vec_id, SparseVector)
-  * @param m max number of possible elements in a vector
-  * @param numHashFunc number of hash functions
+  * @param data          RDD of sparse vectors with vector Ids. RDD(vec_id, SparseVector)
+  * @param m             max number of possible elements in a vector
+  * @param numHashFunc   number of hash functions
   * @param numHashTables number of hashTables.
   *
-  * */
-class LSH(data : RDD[(Long, SparseVector)] = null, m: Int = 0, numHashFunc : Int = 4, numHashTables : Int = 4) extends Serializable {
+  **/
+class LSH(data: RDD[(Long, SparseVector)] = null, m: Int = 0, numHashFunc: Int = 4, numHashTables: Int = 4) extends Serializable {
 
-  def run() : LSHModel = {
+  HashingTF
+  def run(): LSHModel = {
 
     //create a new model object
     val model = new LSHModel(m, numHashFunc, numHashTables)

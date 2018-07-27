@@ -4,8 +4,8 @@ import Keys._
 object Settings {
   lazy val settings = Seq(
     organization := "com.lendap",
-    version := "0.1." + sys.props.getOrElse("buildNumber", default="0-SNAPSHOT"),
-    scalaVersion := "2.10.4",
+    version := "2.0." + sys.props.getOrElse("buildNumber", default="0-SNAPSHOT"),
+    scalaVersion := "2.11.8",
     publishMavenStyle := true,
     publishArtifact in Test := false
   )
@@ -16,6 +16,6 @@ object Settings {
   )
 
   lazy val lshSettings = Seq(
-    name := "lsh-scala"
+    name := "lsh-spark"
   )
 }
